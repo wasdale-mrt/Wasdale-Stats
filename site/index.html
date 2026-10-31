@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Wasdale MRT Call-out Stats</title>
 <meta name="description" content="Wasdale Mountain Rescue Team call-out figures, updated each night.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root {
     --red:#A8272E; --ink:#1d2327; --muted:#5b6670; --bg:#f6f7f5; --panel:#ffffff;
@@ -34,9 +35,9 @@
   .sw-tick { display:inline-block; width:2px; height:12px; margin-right:6px; vertical-align:-2px; background:var(--ink); }
   .sw-dash { display:inline-block; width:16px; margin-right:6px; vertical-align:3px; border-top:2px dashed var(--red); }
   .chart { position:relative; margin-top:8px; }
-  svg { display:block; width:100%; height:auto; overflow:visible; }
-  svg text { fill:var(--muted); font-size:12px; font-family:inherit; }
-  svg .lab { fill:var(--ink); }
+  .chart > svg { display:block; width:100%; height:auto; overflow:visible; }
+  .chart > svg text { fill:var(--muted); font-size:12px; font-family:inherit; }
+  .chart > svg .lab { fill:var(--ink); }
   .tip { position:absolute; pointer-events:none; background:var(--panel); border:1px solid var(--line);
          border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,.15); padding:6px 9px; font-size:13px;
          white-space:nowrap; z-index:2; display:none; }
@@ -45,6 +46,10 @@
          color:#fff; text-decoration:none; font-weight:600; font-size:15px; }
   ul { margin:6px 0 0; padding-left:1.2em; color:var(--muted); font-size:14px; }
   .error { color:var(--muted); padding:30px 0; text-align:center; }
+  #spots { height:340px; border-radius:8px; overflow:hidden; border:1px solid var(--line); }
+  #spots .leaflet-popup-content { margin:8px 10px; font-size:13px; color:#1d2327; }
+  .keys { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:13px; color:var(--muted); margin-top:8px; }
+  .keys .sw { border-radius:50%; }
 </style>
 </head>
 <body>
@@ -90,8 +95,9 @@
   <section class="grid">
     <div class="card">
       <h2>Call-out spots</h2>
-      <p class="note">Each dot is one call-out this year. Hover or tap a dot for details.</p>
+      <p class="note">Each dot is one call-out this year, coloured by root cause. Tap a dot for details. Drag or zoom to look around.</p>
       <div class="chart" id="spots"></div>
+      <div class="keys" id="spotKeys"></div>
       <a class="btn" href="map.html">Open the full map</a>
     </div>
     <div class="card">
@@ -125,6 +131,7 @@
 <div class="tip" id="tip"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const tip = document.getElementById('tip');
 const fmt = (n) => n == null ? '–' : Number(n).toLocaleString('en-GB');
@@ -231,26 +238,56 @@ function running(rows) {
     .on('mouseleave', hideTip);
 }
 
+// Same colours as the full map (map.html).
+const CAUSE_COLOURS = {
+  'Lost': '#A8272E', 'Injured': '#1f6fb2', 'Crag Fast': '#e08a00', 'Medical Emergency': '#2e8b57',
+  'Benighted': '#7a4fb5', 'Overdue': '#0e8a8a', 'Missing': '#c2185b', 'Split from party': '#8d6e00',
+  'Not recorded': '#9aa0a6'
+};
+const SPARE = ['#5d4037', '#00838f', '#6a1b9a', '#827717', '#bf360c', '#283593', '#558b2f', '#4e342e', '#37474f'];
+const colourFor = (c) => {
+  if (!CAUSE_COLOURS[c]) CAUSE_COLOURS[c] = SPARE[Object.keys(CAUSE_COLOURS).length % SPARE.length];
+  return CAUSE_COLOURS[c];
+};
+
+let spotMap = null;
 function spots(points) {
-  const el = clear('spots');
+  const el = document.getElementById('spots');
+  if (!window.L) { el.innerHTML = '<div class="error">The map could not be loaded.</div>'; return; }
+  if (spotMap) return;  // drawn once; a resize just keeps it
   if (!points.length) { el.innerHTML = '<div class="error">No positions yet this year.</div>'; return; }
-  const W = Math.max(280, el.clientWidth), H = Math.round(W * 0.7), pad = 14;
-  const lat0 = d3.mean(points, (p) => p.lat), k = Math.cos(lat0 * Math.PI / 180);
-  const xs = d3.extent(points, (p) => p.lon * k), ys = d3.extent(points, (p) => p.lat);
-  const span = Math.max(xs[1] - xs[0], (ys[1] - ys[0]) * W / H, 0.01);
-  const cx = (xs[0] + xs[1]) / 2, cy = (ys[0] + ys[1]) / 2, s = (W - 2 * pad) / span;
-  const px = (p) => W / 2 + (p.lon * k - cx) * s, py = (p) => H / 2 - (p.lat - cy) * s;
-  const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`);
-  svg.append('rect').attr('width', W).attr('height', H).attr('rx', 8).style('fill', 'var(--bg)');
-  const km = s * 1 / 111;  // 1 km
-  svg.append('line').attr('x1', pad).attr('x2', pad + km).attr('y1', H - pad).attr('y2', H - pad).style('stroke', 'var(--muted)').style('stroke-width', 2);
-  svg.append('text').attr('x', pad).attr('y', H - pad - 6).text('1 km');
-  svg.append('text').attr('x', W - pad).attr('y', pad + 8).attr('text-anchor', 'end').text('N ↑');
-  svg.selectAll('circle').data(points).join('circle')
-    .attr('cx', px).attr('cy', py).attr('r', 5)
-    .style('fill', 'var(--red)').style('fill-opacity', .55).style('stroke', 'var(--panel)').style('stroke-width', 1)
-    .on('mousemove click', (ev, p) => showTip(ev, '<b>' + esc(p.month) + '</b><br>' + esc(p.cause)))
-    .on('mouseleave', hideTip);
+  spotMap = L.map(el, { scrollWheelZoom: false, attributionControl: true });
+  L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    maxZoom: 17,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
+  }).addTo(spotMap);
+  // Top 7 causes get their own colour here; the rest share grey as "Other".
+  const all = {};
+  points.forEach((p) => { const c = p.cause || 'Not recorded'; all[c] = (all[c] || 0) + 1; });
+  const top = Object.keys(all).filter((c) => c !== 'Not recorded').sort((a, b) => all[b] - all[a]).slice(0, 7);
+  const OTHER = '#8a9399';
+  const counts = {};
+  top.forEach((c, i) => { counts[c] = 0; });
+  points.forEach((p) => {
+    const c = p.cause || 'Not recorded';
+    const key = top.includes(c) ? c : 'Other';
+    counts[key] = (counts[key] || 0) + 1;
+    const fill = key === 'Other' ? OTHER : colourFor(c);
+    L.circleMarker([p.lat, p.lon], { radius: 5, color: '#fff', weight: 1, fillColor: fill, fillOpacity: .9 })
+      .bindPopup('<b>' + esc(p.month) + '</b><br>' + esc(c))
+      .addTo(spotMap);
+  });
+  // Fit to the busy middle (most call-outs), so a few far-off ones don't shrink the view.
+  const q = (arr, f) => { const s = arr.slice().sort((a, b) => a - b); return s[Math.floor((s.length - 1) * f)]; };
+  const lats = points.map((p) => p.lat), lons = points.map((p) => p.lon);
+  spotMap.fitBounds([[q(lats, .05), q(lons, .05)], [q(lats, .95), q(lons, .95)]], { padding: [20, 20] });
+  L.control.scale({ imperial: false }).addTo(spotMap);
+  const keys = document.getElementById('spotKeys');
+  Object.keys(counts).forEach((c) => {
+    const k = document.createElement('span');
+    k.innerHTML = '<span class="sw" style="background:' + (c === 'Other' ? OTHER : colourFor(c)) + '"></span>' + esc(c) + ' (' + counts[c] + ')';
+    keys.appendChild(k);
+  });
 }
 
 function draw(d) {
