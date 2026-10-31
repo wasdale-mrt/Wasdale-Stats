@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wasdale MRT Call-out Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --red:#A8272E; --ink:#1d2327; --muted:#5b6670; --bg:#f6f7f5; --panel:#ffffff; --line:#d9ddd8; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--ink); background:var(--bg); }
+  header { padding:14px 16px 10px; }
+  h1 { margin:0; font-size:20px; }
+  .sub { margin:2px 0 0; color:var(--muted); font-size:13px; }
+  .sample { display:inline-block; margin-left:6px; padding:0 8px; border:1px solid var(--line); border-radius:999px; color:#9a5b00; }
+  #map { height:calc(100vh - 70px); min-height:420px; }
+  .legend { background:var(--panel); padding:8px 10px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.25); font-size:13px; line-height:1.6; }
+  .legend b { display:block; margin-bottom:2px; }
+  .sw { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:-1px; }
+  .pop b { font-size:14px; }
+  .pop div { font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Wasdale MRT call-out map</h1>
+  <p class="sub">Call-outs this year, coloured by root cause. Click a dot for details.<span class="sample" id="sampleBadge">Sample data</span></p>
+</header>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// Sample data. The live version reads callouts.json, written next to this page by the nightly D4H script.
+// Each row: { ref, month, location, cause, lat, lon, grid_ref (optional) }
+const SAMPLE = [{"ref":"26-001","month":"Jan","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.45271,"lon":-3.21455},{"ref":"26-002","month":"Jan","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45331,"lon":-3.24423},{"ref":"26-003","month":"Jan","location":"Great Gable","cause":"Lost / navigation","lat":54.48532,"lon":-3.22164},{"ref":"26-004","month":"Jan","location":"Great Gable","cause":"Lost / navigation","lat":54.47058,"lon":-3.20556},{"ref":"26-005","month":"Jan","location":"Kirk Fell","cause":"Slip or fall injury","lat":54.4865,"lon":-3.23521},{"ref":"26-006","month":"Jan","location":"Yewbarrow","cause":"Cragfast","lat":54.46771,"lon":-3.24982},{"ref":"26-007","month":"Jan","location":"Other","cause":"Exhaustion / benighted","lat":54.45699,"lon":-3.19725},{"ref":"26-008","month":"Feb","location":"Scafell Pike","cause":"Exhaustion / benighted","lat":54.45998,"lon":-3.22228},{"ref":"26-009","month":"Feb","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.45828,"lon":-3.2188},{"ref":"26-010","month":"Feb","location":"Great Gable","cause":"Lost / navigation","lat":54.47985,"lon":-3.23201},{"ref":"26-011","month":"Feb","location":"Pillar","cause":"Lost / navigation","lat":54.49667,"lon":-3.28232},{"ref":"26-012","month":"Feb","location":"Pillar","cause":"Overdue search","lat":54.49476,"lon":-3.27695},{"ref":"26-013","month":"Feb","location":"Yewbarrow","cause":"Other","lat":54.46459,"lon":-3.2553},{"ref":"26-014","month":"Mar","location":"Scafell Pike","cause":"Lost / navigation","lat":54.4592,"lon":-3.20709},{"ref":"26-015","month":"Mar","location":"Scafell Pike","cause":"Lost / navigation","lat":54.44888,"lon":-3.20852},{"ref":"26-016","month":"Mar","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.45324,"lon":-3.20933},{"ref":"26-017","month":"Mar","location":"Great Gable","cause":"Lost / navigation","lat":54.47885,"lon":-3.21067},{"ref":"26-018","month":"Mar","location":"Great Gable","cause":"Lost / navigation","lat":54.48045,"lon":-3.2288},{"ref":"26-019","month":"Mar","location":"Great Gable","cause":"Exhaustion / benighted","lat":54.47414,"lon":-3.2076},{"ref":"26-020","month":"Mar","location":"Scafell","cause":"Slip or fall injury","lat":54.44865,"lon":-3.22481},{"ref":"26-021","month":"Mar","location":"Scafell","cause":"Medical","lat":54.45069,"lon":-3.23667},{"ref":"26-022","month":"Mar","location":"Yewbarrow","cause":"Lost / navigation","lat":54.47336,"lon":-3.26191},{"ref":"26-023","month":"Apr","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45777,"lon":-3.22296},{"ref":"26-024","month":"Apr","location":"Scafell Pike","cause":"Overdue search","lat":54.45393,"lon":-3.21925},{"ref":"26-025","month":"Apr","location":"Great Gable","cause":"Cragfast","lat":54.4633,"lon":-3.20915},{"ref":"26-026","month":"Apr","location":"Great Gable","cause":"Slip or fall injury","lat":54.47771,"lon":-3.21899},{"ref":"26-027","month":"Apr","location":"Great Gable","cause":"Lost / navigation","lat":54.47584,"lon":-3.20044},{"ref":"26-028","month":"Apr","location":"Great Gable","cause":"Overdue search","lat":54.4801,"lon":-3.21591},{"ref":"26-029","month":"Apr","location":"Great Gable","cause":"Medical","lat":54.47654,"lon":-3.22113},{"ref":"26-030","month":"Apr","location":"Pillar","cause":"Cragfast","lat":54.4988,"lon":-3.28297},{"ref":"26-031","month":"Apr","location":"Yewbarrow","cause":"Lost / navigation","lat":54.46646,"lon":-3.2592},{"ref":"26-032","month":"Apr","location":"Other","cause":"Exhaustion / benighted","lat":54.43947,"lon":-3.28613},{"ref":"26-033","month":"Apr","location":"Other","cause":"Slip or fall injury","lat":54.46586,"lon":-3.23607},{"ref":"26-034","month":"May","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45761,"lon":-3.21781},{"ref":"26-035","month":"May","location":"Scafell Pike","cause":"Medical","lat":54.44942,"lon":-3.2124},{"ref":"26-036","month":"May","location":"Scafell Pike","cause":"Cragfast","lat":54.45726,"lon":-3.21309},{"ref":"26-037","month":"May","location":"Scafell Pike","cause":"Cragfast","lat":54.44644,"lon":-3.22597},{"ref":"26-038","month":"May","location":"Scafell Pike","cause":"Medical","lat":54.44817,"lon":-3.21695},{"ref":"26-039","month":"May","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.45616,"lon":-3.19813},{"ref":"26-040","month":"May","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.45911,"lon":-3.21263},{"ref":"26-041","month":"May","location":"Scafell Pike","cause":"Overdue search","lat":54.45225,"lon":-3.22159},{"ref":"26-042","month":"May","location":"Great Gable","cause":"Lost / navigation","lat":54.47821,"lon":-3.21953},{"ref":"26-043","month":"May","location":"Great Gable","cause":"Lost / navigation","lat":54.48284,"lon":-3.21156},{"ref":"26-044","month":"May","location":"Kirk Fell","cause":"Other","lat":54.48414,"lon":-3.23659},{"ref":"26-045","month":"May","location":"Kirk Fell","cause":"Exhaustion / benighted","lat":54.48293,"lon":-3.23972},{"ref":"26-046","month":"May","location":"Kirk Fell","cause":"Overdue search","lat":54.48525,"lon":-3.24652},{"ref":"26-047","month":"Jun","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.45899,"lon":-3.22576},{"ref":"26-048","month":"Jun","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.45127,"lon":-3.21633},{"ref":"26-049","month":"Jun","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45302,"lon":-3.22331},{"ref":"26-050","month":"Jun","location":"Scafell Pike","cause":"Exhaustion / benighted","lat":54.45543,"lon":-3.2283},{"ref":"26-051","month":"Jun","location":"Scafell Pike","cause":"Medical","lat":54.45776,"lon":-3.22973},{"ref":"26-052","month":"Jun","location":"Scafell Pike","cause":"Overdue search","lat":54.45759,"lon":-3.21485},{"ref":"26-053","month":"Jun","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.45141,"lon":-3.21867},{"ref":"26-054","month":"Jun","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45324,"lon":-3.21076},{"ref":"26-055","month":"Jun","location":"Scafell Pike","cause":"Lost / navigation","lat":54.44437,"lon":-3.23476},{"ref":"26-056","month":"Jun","location":"Great Gable","cause":"Slip or fall injury","lat":54.46696,"lon":-3.21258},{"ref":"26-057","month":"Jun","location":"Scafell","cause":"Cragfast","lat":54.44446,"lon":-3.22111},{"ref":"26-058","month":"Jun","location":"Scafell","cause":"Exhaustion / benighted","lat":54.447,"lon":-3.23184},{"ref":"26-059","month":"Jun","location":"Scafell","cause":"Slip or fall injury","lat":54.4519,"lon":-3.22388},{"ref":"26-060","month":"Jun","location":"Pillar","cause":"Lost / navigation","lat":54.49579,"lon":-3.28345},{"ref":"26-061","month":"Jun","location":"Kirk Fell","cause":"Exhaustion / benighted","lat":54.48521,"lon":-3.23544},{"ref":"26-062","month":"Jun","location":"Other","cause":"Overdue search","lat":54.46511,"lon":-3.2456},{"ref":"26-063","month":"Jul","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.45053,"lon":-3.20972},{"ref":"26-064","month":"Jul","location":"Scafell Pike","cause":"Other","lat":54.45949,"lon":-3.21764},{"ref":"26-065","month":"Jul","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.45438,"lon":-3.24669},{"ref":"26-066","month":"Jul","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45467,"lon":-3.21965},{"ref":"26-067","month":"Jul","location":"Scafell Pike","cause":"Medical","lat":54.45389,"lon":-3.23383},{"ref":"26-068","month":"Jul","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45436,"lon":-3.21941},{"ref":"26-069","month":"Jul","location":"Scafell Pike","cause":"Cragfast","lat":54.45993,"lon":-3.22526},{"ref":"26-070","month":"Jul","location":"Scafell Pike","cause":"Exhaustion / benighted","lat":54.45076,"lon":-3.21292},{"ref":"26-071","month":"Jul","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.45052,"lon":-3.21794},{"ref":"26-072","month":"Jul","location":"Great Gable","cause":"Slip or fall injury","lat":54.47159,"lon":-3.19981},{"ref":"26-073","month":"Jul","location":"Great Gable","cause":"Slip or fall injury","lat":54.48481,"lon":-3.22478},{"ref":"26-074","month":"Jul","location":"Scafell","cause":"Lost / navigation","lat":54.45141,"lon":-3.22176},{"ref":"26-075","month":"Jul","location":"Scafell","cause":"Cragfast","lat":54.43944,"lon":-3.23013},{"ref":"26-076","month":"Jul","location":"Scafell","cause":"Cragfast","lat":54.44516,"lon":-3.22756},{"ref":"26-077","month":"Jul","location":"Pillar","cause":"Slip or fall injury","lat":54.49753,"lon":-3.28737},{"ref":"26-078","month":"Jul","location":"Kirk Fell","cause":"Cragfast","lat":54.48548,"lon":-3.24189},{"ref":"26-079","month":"Jul","location":"Yewbarrow","cause":"Slip or fall injury","lat":54.46398,"lon":-3.26228},{"ref":"26-080","month":"Jul","location":"Other","cause":"Slip or fall injury","lat":54.46654,"lon":-3.24663},{"ref":"26-081","month":"Aug","location":"Scafell Pike","cause":"Medical","lat":54.45707,"lon":-3.21632},{"ref":"26-082","month":"Aug","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45335,"lon":-3.22154},{"ref":"26-083","month":"Aug","location":"Scafell Pike","cause":"Lost / navigation","lat":54.46423,"lon":-3.22597},{"ref":"26-084","month":"Aug","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45488,"lon":-3.23731},{"ref":"26-085","month":"Aug","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.45338,"lon":-3.2374},{"ref":"26-086","month":"Aug","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.44631,"lon":-3.21991},{"ref":"26-087","month":"Aug","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.46226,"lon":-3.21916},{"ref":"26-088","month":"Aug","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.45852,"lon":-3.22552},{"ref":"26-089","month":"Aug","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.45126,"lon":-3.22967},{"ref":"26-090","month":"Aug","location":"Scafell Pike","cause":"Cragfast","lat":54.4498,"lon":-3.21895},{"ref":"26-091","month":"Aug","location":"Great Gable","cause":"Slip or fall injury","lat":54.48143,"lon":-3.21974},{"ref":"26-092","month":"Aug","location":"Great Gable","cause":"Lost / navigation","lat":54.48304,"lon":-3.21616},{"ref":"26-093","month":"Aug","location":"Great Gable","cause":"Slip or fall injury","lat":54.47077,"lon":-3.20116},{"ref":"26-094","month":"Aug","location":"Great Gable","cause":"Lost / navigation","lat":54.47648,"lon":-3.22168},{"ref":"26-095","month":"Aug","location":"Scafell","cause":"Lost / navigation","lat":54.44553,"lon":-3.232},{"ref":"26-096","month":"Aug","location":"Scafell","cause":"Exhaustion / benighted","lat":54.44932,"lon":-3.23051},{"ref":"26-097","month":"Aug","location":"Pillar","cause":"Cragfast","lat":54.50121,"lon":-3.27447},{"ref":"26-098","month":"Aug","location":"Kirk Fell","cause":"Cragfast","lat":54.48452,"lon":-3.24672},{"ref":"26-099","month":"Aug","location":"Yewbarrow","cause":"Other","lat":54.46398,"lon":-3.26712},{"ref":"26-100","month":"Sep","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45966,"lon":-3.22248},{"ref":"26-101","month":"Sep","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.46167,"lon":-3.23059},{"ref":"26-102","month":"Sep","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45391,"lon":-3.23849},{"ref":"26-103","month":"Sep","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.44945,"lon":-3.21918},{"ref":"26-104","month":"Sep","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45162,"lon":-3.21655},{"ref":"26-105","month":"Sep","location":"Scafell Pike","cause":"Medical","lat":54.45557,"lon":-3.20689},{"ref":"26-106","month":"Sep","location":"Scafell Pike","cause":"Slip or fall injury","lat":54.44927,"lon":-3.22456},{"ref":"26-107","month":"Sep","location":"Scafell Pike","cause":"Lost / navigation","lat":54.46215,"lon":-3.21835},{"ref":"26-108","month":"Sep","location":"Scafell Pike","cause":"Medical","lat":54.46329,"lon":-3.22487},{"ref":"26-109","month":"Sep","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45026,"lon":-3.2151},{"ref":"26-110","month":"Sep","location":"Scafell","cause":"Lost / navigation","lat":54.44907,"lon":-3.22377},{"ref":"26-111","month":"Sep","location":"Pillar","cause":"Lost / navigation","lat":54.4983,"lon":-3.27838},{"ref":"26-112","month":"Sep","location":"Pillar","cause":"Lost / navigation","lat":54.49861,"lon":-3.28506},{"ref":"26-113","month":"Sep","location":"Other","cause":"Medical","lat":54.46172,"lon":-3.19378},{"ref":"26-114","month":"Oct","location":"Scafell Pike","cause":"Exhaustion / benighted","lat":54.45295,"lon":-3.21616},{"ref":"26-115","month":"Oct","location":"Scafell Pike","cause":"Medical","lat":54.44916,"lon":-3.22018},{"ref":"26-116","month":"Oct","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45209,"lon":-3.23886},{"ref":"26-117","month":"Oct","location":"Scafell Pike","cause":"Medical","lat":54.45944,"lon":-3.23114},{"ref":"26-118","month":"Oct","location":"Scafell Pike","cause":"Lost / navigation","lat":54.45049,"lon":-3.2057},{"ref":"26-119","month":"Oct","location":"Scafell Pike","cause":"Cragfast","lat":54.45441,"lon":-3.21838},{"ref":"26-120","month":"Oct","location":"Scafell","cause":"Lost / navigation","lat":54.44942,"lon":-3.22697},{"ref":"26-121","month":"Oct","location":"Scafell","cause":"Lost / navigation","lat":54.43949,"lon":-3.23201},{"ref":"26-122","month":"Oct","location":"Pillar","cause":"Lost / navigation","lat":54.49385,"lon":-3.27903},{"ref":"26-123","month":"Oct","location":"Other","cause":"Slip or fall injury","lat":54.45109,"lon":-3.20249}];
+
+const CAUSE_COLOURS = {
+  'Lost / navigation': '#A8272E',
+  'Slip or fall injury': '#1f6fb2',
+  'Cragfast': '#e08a00',
+  'Medical': '#2e8b57',
+  'Exhaustion / benighted': '#7a4fb5',
+  'Overdue search': '#0e8a8a',
+  'Other': '#6b6b6b'
+};
+const colourFor = (c) => CAUSE_COLOURS[c] || '#6b6b6b';
+
+const map = L.map('map');
+L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  maxZoom: 17,
+  attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
+}).addTo(map);
+map.setView([54.465, -3.235], 13);
+
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function draw(points) {
+  const groups = {};
+  points.forEach((p) => {
+    const lat = Number(p.lat), lon = Number(p.lon);
+    if (!isFinite(lat) || !isFinite(lon)) return;
+    const cause = p.cause || 'Other';
+    groups[cause] = groups[cause] || L.layerGroup().addTo(map);
+    L.circleMarker([lat, lon], { radius: 6, color: colourFor(cause), weight: 2, fillOpacity: .55 })
+      .bindPopup(
+        '<div class="pop"><b>' + esc(p.ref) + '</b> &middot; ' + esc(p.month) +
+        '<div>Where: ' + esc(p.location) + '</div>' +
+        '<div>Cause: ' + esc(cause) + '</div>' +
+        (p.grid_ref ? '<div>Grid ref: ' + esc(p.grid_ref) + '</div>' : '') +
+        '<div>' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '</div></div>')
+      .addTo(groups[cause]);
+  });
+
+  // Tick boxes to show or hide each root cause
+  const overlays = {};
+  Object.keys(groups).sort().forEach((c) => {
+    const n = groups[c].getLayers().length;
+    overlays['<span class="sw" style="background:' + colourFor(c) + '"></span>' + esc(c) + ' (' + n + ')'] = groups[c];
+  });
+  L.control.layers(null, overlays, { collapsed: window.innerWidth < 600 }).addTo(map);
+
+  const pts = points.filter((p) => isFinite(Number(p.lat))).map((p) => [Number(p.lat), Number(p.lon)]);
+  if (pts.length) map.fitBounds(pts, { padding: [28, 28] });
+  L.control.scale({ imperial: false }).addTo(map);
+}
+
+fetch('callouts.json', { cache: 'no-store' })
+  .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+  .then((rows) => { document.getElementById('sampleBadge').hidden = true; draw(rows); })
+  .catch(() => draw(SAMPLE));
+</script>
+</body>
+</html>
