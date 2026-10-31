@@ -1,0 +1,4 @@
+# Made each night by the GitHub Actions job. Not kept in the repository.
+site/data/
+site/callouts.json
+__pycache__/

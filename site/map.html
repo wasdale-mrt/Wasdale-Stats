@@ -19,12 +19,15 @@
   .sw { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:-1px; }
   .pop b { font-size:14px; }
   .pop div { font-size:13px; }
+  select { font:inherit; font-size:13px; margin-left:6px; }
+  a { color:var(--red); }
 </style>
 </head>
 <body>
 <header>
   <h1>Wasdale MRT call-out map</h1>
-  <p class="sub">Call-outs this year, coloured by root cause. Click a dot for details.<span class="sample" id="sampleBadge">Sample data</span></p>
+  <p class="sub"><span id="which">Call-outs this year</span>, coloured by root cause. Click a dot for details.
+    <select id="year" hidden aria-label="Year"></select> <a href="index.html">Back to the stats</a><span class="sample" id="sampleBadge">Sample data</span></p>
 </header>
 <div id="map"></div>
 
@@ -43,9 +46,20 @@ const CAUSE_COLOURS = {
   'Overdue search': '#0e8a8a',
   'Other': '#6b6b6b'
 };
-const colourFor = (c) => CAUSE_COLOURS[c] || '#6b6b6b';
+// Colours for the real D4H root causes. Any other cause gets the next spare colour.
+Object.assign(CAUSE_COLOURS, {
+  'Lost': '#A8272E', 'Injured': '#1f6fb2', 'Crag Fast': '#e08a00', 'Medical Emergency': '#2e8b57',
+  'Benighted': '#7a4fb5', 'Overdue': '#0e8a8a', 'Missing': '#c2185b', 'Split from party': '#8d6e00',
+  'Not recorded': '#9aa0a6'
+});
+const SPARE = ['#5d4037', '#00838f', '#6a1b9a', '#827717', '#bf360c', '#283593', '#558b2f', '#4e342e', '#37474f'];
+const colourFor = (c) => {
+  if (!CAUSE_COLOURS[c]) CAUSE_COLOURS[c] = SPARE[Object.keys(CAUSE_COLOURS).length % SPARE.length];
+  return CAUSE_COLOURS[c];
+};
 
 const map = L.map('map');
+let layers = [], control = null, scale = null;
 L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
   maxZoom: 17,
   attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
@@ -55,17 +69,20 @@ map.setView([54.465, -3.235], 13);
 function esc(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function draw(points) {
+  layers.forEach((l) => map.removeLayer(l)); layers = [];
+  if (control) map.removeControl(control);
   const groups = {};
   points.forEach((p) => {
     const lat = Number(p.lat), lon = Number(p.lon);
     if (!isFinite(lat) || !isFinite(lon)) return;
     const cause = p.cause || 'Other';
-    groups[cause] = groups[cause] || L.layerGroup().addTo(map);
+    if (!groups[cause]) { groups[cause] = L.layerGroup().addTo(map); layers.push(groups[cause]); }
     L.circleMarker([lat, lon], { radius: 6, color: colourFor(cause), weight: 2, fillOpacity: .55 })
       .bindPopup(
-        '<div class="pop"><b>' + esc(p.ref) + '</b> &middot; ' + esc(p.month) +
+        '<div class="pop"><b>' + esc(p.ref) + '</b> &middot; ' + esc(p.month) + (p.year ? ' ' + esc(p.year) : '') +
         '<div>Where: ' + esc(p.location) + '</div>' +
-        '<div>Cause: ' + esc(cause) + '</div>' +
+        (p.type ? '<div>Type: ' + esc(p.type) + '</div>' : '') +
+        '<div>Cause: ' + esc((p.causes && p.causes.length ? p.causes.join(', ') : cause)) + '</div>' +
         (p.grid_ref ? '<div>Grid ref: ' + esc(p.grid_ref) + '</div>' : '') +
         '<div>' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '</div></div>')
       .addTo(groups[cause]);
@@ -77,16 +94,31 @@ function draw(points) {
     const n = groups[c].getLayers().length;
     overlays['<span class="sw" style="background:' + colourFor(c) + '"></span>' + esc(c) + ' (' + n + ')'] = groups[c];
   });
-  L.control.layers(null, overlays, { collapsed: window.innerWidth < 600 }).addTo(map);
+  control = L.control.layers(null, overlays, { collapsed: window.innerWidth < 600 }).addTo(map);
 
   const pts = points.filter((p) => isFinite(Number(p.lat))).map((p) => [Number(p.lat), Number(p.lon)]);
   if (pts.length) map.fitBounds(pts, { padding: [28, 28] });
-  L.control.scale({ imperial: false }).addTo(map);
+  if (!scale) scale = L.control.scale({ imperial: false }).addTo(map);
+}
+
+// Year picker, shown when the data has more than one year.
+function withYears(rows) {
+  const years = [...new Set(rows.map((r) => r.year).filter(Boolean))].sort((a, b) => b - a);
+  if (years.length < 2) { draw(rows); return; }
+  const pick = document.getElementById('year');
+  pick.innerHTML = years.map((y) => '<option>' + y + '</option>').join('') + '<option value="all">All years</option>';
+  pick.hidden = false;
+  const show = () => {
+    const v = pick.value;
+    document.getElementById('which').textContent = v === 'all' ? 'All call-outs' : 'Call-outs in ' + v;
+    draw(v === 'all' ? rows : rows.filter((r) => String(r.year) === v));
+  };
+  pick.onchange = show; show();
 }
 
 fetch('callouts.json', { cache: 'no-store' })
   .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-  .then((rows) => { document.getElementById('sampleBadge').hidden = true; draw(rows); })
+  .then((rows) => { document.getElementById('sampleBadge').hidden = true; withYears(rows); })
   .catch(() => draw(SAMPLE));
 </script>
 </body>

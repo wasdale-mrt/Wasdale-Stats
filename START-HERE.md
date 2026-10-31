@@ -39,6 +39,23 @@ repository.
 - **Where**: from the location tag, and the incident grid ref / lat-long.
 - Call-out spots plot (small, no base map) plus a link to the full map.
 - Day of the week.
+- Call-out type (Full Team, Limited, Alert).
+
+## Decisions (31 Oct 2026)
+
+- **Alerts count** as call-outs, with Full Team and Limited.
+- **Sensitive root causes** (Suicide, Body Recovery) are **shown as tagged**.
+- **Team hours** = members on the call-out (`countAttendance`) x how long it
+  lasted (`startsAt` to `endsAt`). D4H has no hours field on incidents.
+- **Every incident counts.** Training exercises are kept apart in D4H, so the
+  incident list is call-outs only. One call-out has swiftwater course tags
+  by mistake: it still counts, the tags are just not shown.
+- **Injury and medical tags** (body parts, conditions) are casualty details.
+  They are never written to the public files.
+- **Map popups** show reference, month and year, type, place and causes.
+  No exact date or time.
+- Which tag is which group lives in `tools/tag_groups.py`. A new D4H tag is
+  left off the pages until it is added there. The nightly log lists any.
 
 A design mock-up with sample data lives in Claude as an artifact called
 "Wasdale MRT Dashboard". The public version will be rebuilt as a page here.
@@ -51,14 +68,20 @@ A design mock-up with sample data lives in Claude as an artifact called
    only for dates, references, tags and position - no casualty or member
    details, because Actions logs on a public repository are public.
    Lee runs it once and pastes the log into Claude.
-3. From that output, Claude writes the nightly stats job and the pages.
-4. Turn on GitHub Pages.
+3. **Done (31 Oct 2026).** Claude writes the nightly stats job and the pages.
+4. Lee turns on GitHub Pages: Settings > Pages > Source = **GitHub Actions**.
+   Then runs "Nightly stats" once by hand from the Actions tab.
+   The pages will be at https://wasdale-mrt.github.io/Wasdale-Stats/
 
 ## Files
 
 | Path | What it is |
 |---|---|
-| `site/map.html` | The OpenTopoMap call-out map. Shows sample data until `callouts.json` exists beside it. |
+| `site/index.html` | The stats dashboard. Reads `data/stats.json`. |
+| `site/map.html` | The OpenTopoMap call-out map. Reads `callouts.json`. Shows sample data until it exists. Has a year picker. |
+| `.github/workflows/nightly.yml` | Nightly job, about 02:17 each night. Reads D4H, builds both JSON files, publishes `site/` to GitHub Pages. Also runs by hand, or when files change. |
+| `tools/build_stats.py` | The nightly script. GET only. The JSON files are made fresh each night and are not kept in the repository. |
+| `tools/tag_groups.py` | Which D4H tag is a call-out type, root cause, place, training, private (injury/medical) or not shown. |
 | `.github/workflows/d4h-discovery.yml` | Discovery job. Run by hand: Actions tab > "D4H discovery (read only)" > Run workflow. |
 | `tools/d4h_discovery.py` | The discovery script. GET only. Prints field names, and values only for dates, references, tags and position. |
 

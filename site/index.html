@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wasdale MRT Call-out Stats</title>
+<meta name="description" content="Wasdale Mountain Rescue Team call-out figures, updated each night.">
+<style>
+  :root {
+    --red:#A8272E; --ink:#1d2327; --muted:#5b6670; --bg:#f6f7f5; --panel:#ffffff;
+    --line:#d9ddd8; --last:#b8bfc4; --grid:#eceeeb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --red:#e0656b; --ink:#e8eaea; --muted:#a3acb3; --bg:#15191b; --panel:#1e2427;
+            --line:#343c40; --last:#5d676d; --grid:#2a3135; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         color:var(--ink); background:var(--bg); }
+  main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; display:flex; flex-direction:column; gap:18px; }
+  h1 { margin:0; font-size:26px; font-weight:650; }
+  h2 { margin:0; font-size:17px; font-weight:600; }
+  .sub, .note { margin:2px 0 0; color:var(--muted); font-size:14px; }
+  .take { margin:8px 0 0; font-size:17px; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap:14px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap:14px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; min-width:0; }
+  .label { font-size:14px; color:var(--muted); }
+  .big { font-size:40px; font-weight:650; line-height:1.15; margin:4px 0; font-variant-numeric:tabular-nums; }
+  .foot { font-size:14px; color:var(--muted); }
+  .foot b { color:var(--ink); }
+  .legend { display:flex; flex-wrap:wrap; gap:14px; font-size:13px; color:var(--muted); margin-top:6px; }
+  .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px; }
+  .sw-tick { display:inline-block; width:2px; height:12px; margin-right:6px; vertical-align:-2px; background:var(--ink); }
+  .sw-dash { display:inline-block; width:16px; margin-right:6px; vertical-align:3px; border-top:2px dashed var(--red); }
+  .chart { position:relative; margin-top:8px; }
+  svg { display:block; width:100%; height:auto; overflow:visible; }
+  svg text { fill:var(--muted); font-size:12px; font-family:inherit; }
+  svg .lab { fill:var(--ink); }
+  .tip { position:absolute; pointer-events:none; background:var(--panel); border:1px solid var(--line);
+         border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,.15); padding:6px 9px; font-size:13px;
+         white-space:nowrap; z-index:2; display:none; }
+  a { color:var(--red); }
+  .btn { display:inline-block; margin-top:10px; padding:8px 14px; border-radius:8px; background:var(--red);
+         color:#fff; text-decoration:none; font-weight:600; font-size:15px; }
+  ul { margin:6px 0 0; padding-left:1.2em; color:var(--muted); font-size:14px; }
+  .error { color:var(--muted); padding:30px 0; text-align:center; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Wasdale MRT call-outs</h1>
+    <p class="sub" id="sub">Loading the latest figures…</p>
+    <p class="take" id="take"></p>
+  </header>
+
+  <section class="tiles" id="tiles"></section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>Where we are vs last year</h2>
+      <p class="note">Running total of call-outs. The dotted line shows where we end up if the rest of the year runs like last year.</p>
+      <div class="legend"><span><span class="sw" style="background:var(--red)"></span>This year</span><span><span class="sw-dash"></span>Projected</span><span><span class="sw" style="background:var(--last)"></span>Last year</span></div>
+      <div class="chart" id="running"></div>
+    </div>
+    <div class="card">
+      <h2>Call-outs by month</h2>
+      <p class="note">Each month this year beside the same month last year.</p>
+      <div class="legend"><span><span class="sw" style="background:var(--red)"></span>This year</span><span><span class="sw" style="background:var(--last)"></span>Last year</span></div>
+      <div class="chart" id="monthly"></div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>Root cause</h2>
+      <p class="note" id="causeNote">Call-outs this year, from the tags on each call-out.</p>
+      <div class="legend"><span><span class="sw" style="background:var(--red)"></span>This year</span><span><span class="sw-tick"></span>Last year, same point</span></div>
+      <div class="chart" id="causes"></div>
+    </div>
+    <div class="card">
+      <h2>Where</h2>
+      <p class="note">The 12 busiest places this year, from the location tags. A call-out can have more than one place.</p>
+      <div class="legend"><span><span class="sw" style="background:var(--red)"></span>This year</span><span><span class="sw-tick"></span>Last year, same point</span></div>
+      <div class="chart" id="places"></div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>Call-out spots</h2>
+      <p class="note">Each dot is one call-out this year. Hover or tap a dot for details.</p>
+      <div class="chart" id="spots"></div>
+      <a class="btn" href="map.html">Open the full map</a>
+    </div>
+    <div class="card">
+      <h2>Day of the week</h2>
+      <p class="note">When call-outs happen, year to date.</p>
+      <div class="legend"><span><span class="sw" style="background:var(--red)"></span>This year</span><span><span class="sw" style="background:var(--last)"></span>Last year, same point</span></div>
+      <div class="chart" id="days"></div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>Call-out type</h2>
+      <p class="note">Full Team, Limited and Alert call-outs, year to date.</p>
+      <div class="legend"><span><span class="sw" style="background:var(--red)"></span>This year</span><span><span class="sw-tick"></span>Last year, same point</span></div>
+      <div class="chart" id="types"></div>
+    </div>
+    <div class="card">
+      <h2>About these figures</h2>
+      <ul>
+        <li>Read from D4H each night. Training is not included.</li>
+        <li>"Last year" means the same date last year, so the numbers are fair to compare.</li>
+        <li id="hoursNote">Team hours = members on the call-out × how long it lasted.</li>
+        <li>A call-out can have more than one root cause and place.</li>
+        <li>No names or casualty details are shown.</li>
+      </ul>
+      <p class="note" style="margin-top:10px" id="updated"></p>
+    </div>
+  </section>
+</main>
+<div class="tip" id="tip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+const tip = document.getElementById('tip');
+const fmt = (n) => n == null ? '–' : Number(n).toLocaleString('en-GB');
+const clear = (id) => { const el = document.getElementById(id); el.innerHTML = ''; return el; };
+
+function showTip(ev, html) {
+  tip.innerHTML = html; tip.style.display = 'block';
+  const w = tip.offsetWidth, x = Math.min(ev.pageX + 12, window.scrollX + document.documentElement.clientWidth - w - 8);
+  tip.style.left = Math.max(8, x) + 'px'; tip.style.top = (ev.pageY + 14) + 'px';
+}
+const hideTip = () => { tip.style.display = 'none'; };
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function change(p) {
+  if (p == null) return 'no figure';
+  if (p === 0) return 'the same as';
+  return (p > 0 ? 'up ' : 'down ') + Math.abs(p) + '% on';
+}
+
+function tiles(d) {
+  const el = clear('tiles');
+  d.headline.forEach((h) => {
+    const c = document.createElement('div'); c.className = 'card';
+    c.innerHTML = '<div class="label">' + esc(h.label) + '</div>' +
+      '<div class="big">' + fmt(h.this_year) + '</div>' +
+      '<div class="foot"><b>' + esc(change(h.change_pct)) + '</b> last year (' + fmt(h.last_year) + ')</div>';
+    el.appendChild(c);
+  });
+}
+
+// Grouped bars: rows [{key, this_year, last_year}]
+function columns(id, rows, key) {
+  const el = clear(id), W = Math.max(280, el.clientWidth), H = 240, m = {t:10, r:6, b:24, l:32};
+  const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const x = d3.scaleBand(rows.map((r) => r[key]), [m.l, W - m.r]).padding(0.2);
+  const x2 = d3.scaleBand(['this_year', 'last_year'], [0, x.bandwidth()]).padding(0.08);
+  const y = d3.scaleLinear([0, d3.max(rows, (r) => Math.max(r.this_year || 0, r.last_year || 0)) || 1], [H - m.b, m.t]).nice();
+  svg.append('g').selectAll('line').data(y.ticks(4)).join('line')
+    .attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', 'var(--grid)');
+  svg.append('g').selectAll('text').data(y.ticks(4)).join('text')
+    .attr('x', m.l - 6).attr('y', (v) => y(v) + 4).attr('text-anchor', 'end').text(fmt);
+  svg.append('g').selectAll('text').data(rows).join('text')
+    .attr('x', (r) => x(r[key]) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle')
+    .text((r) => rows.length > 7 && W < 480 ? String(r[key]).slice(0, 1) : r[key]);
+  const g = svg.append('g').selectAll('g').data(rows).join('g').attr('transform', (r) => `translate(${x(r[key])},0)`);
+  g.selectAll('rect').data((r) => ['this_year', 'last_year'].map((k) => ({k, v: r[k]})).filter((d) => d.v != null)).join('rect')
+    .attr('x', (d) => x2(d.k)).attr('width', x2.bandwidth()).attr('rx', 2)
+    .attr('y', (d) => y(d.v)).attr('height', (d) => y(0) - y(d.v))
+    .style('fill', (d) => d.k === 'this_year' ? 'var(--red)' : 'var(--last)');
+  g.append('rect').attr('width', x.bandwidth()).attr('height', H).style('fill', 'transparent')
+    .on('mousemove', (ev, r) => showTip(ev, '<b>' + esc(r[key]) + '</b><br>This year: ' + fmt(r.this_year) + '<br>Last year: ' + fmt(r.last_year)))
+    .on('mouseleave', hideTip);
+}
+
+// Horizontal bars with a tick for last year: rows [{name, this_year, last_year}]
+function hbars(id, rows) {
+  const el = clear(id);
+  if (!rows.length) { el.innerHTML = '<div class="error">No call-outs yet this year.</div>'; return; }
+  const W = Math.max(280, el.clientWidth), row = 26, m = {t:4, r:34, b:4, l: Math.min(190, W * 0.45)};
+  const H = m.t + m.b + rows.length * row;
+  const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const x = d3.scaleLinear([0, d3.max(rows, (r) => Math.max(r.this_year, r.last_year)) || 1], [m.l, W - m.r]);
+  const y = d3.scaleBand(rows.map((r) => r.name), [m.t, H - m.b]).padding(0.25);
+  const g = svg.selectAll('g').data(rows).join('g').attr('transform', (r) => `translate(0,${y(r.name)})`);
+  g.append('text').attr('class', 'lab').attr('x', m.l - 8).attr('y', y.bandwidth() / 2 + 4).attr('text-anchor', 'end')
+    .text((r) => { const n = Math.floor((m.l - 10) / 6.6); return r.name.length > n ? r.name.slice(0, n - 1) + '…' : r.name; });
+  g.append('rect').attr('x', m.l).attr('height', y.bandwidth()).attr('rx', 2)
+    .attr('width', (r) => Math.max(0, x(r.this_year) - m.l)).style('fill', 'var(--red)');
+  g.append('line').attr('x1', (r) => x(r.last_year)).attr('x2', (r) => x(r.last_year))
+    .attr('y1', -3).attr('y2', y.bandwidth() + 3).style('stroke', 'var(--ink)').style('stroke-width', 2);
+  g.append('text').attr('x', (r) => Math.max(x(r.this_year), x(r.last_year)) + 6).attr('y', y.bandwidth() / 2 + 4).text((r) => fmt(r.this_year));
+  g.append('rect').attr('width', W).attr('height', y.bandwidth()).style('fill', 'transparent')
+    .on('mousemove', (ev, r) => showTip(ev, '<b>' + esc(r.name) + '</b><br>This year: ' + fmt(r.this_year) + '<br>Last year, same point: ' + fmt(r.last_year)))
+    .on('mouseleave', hideTip);
+}
+
+function running(rows) {
+  const el = clear('running'), W = Math.max(280, el.clientWidth), H = 240, m = {t:10, r:10, b:24, l:36};
+  const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const x = d3.scalePoint(rows.map((r) => r.month), [m.l, W - m.r]);
+  const top = d3.max(rows, (r) => Math.max(r.this_year || 0, r.last_year || 0, r.projected || 0)) || 1;
+  const y = d3.scaleLinear([0, top], [H - m.b, m.t]).nice();
+  svg.append('g').selectAll('line').data(y.ticks(4)).join('line')
+    .attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', 'var(--grid)');
+  svg.append('g').selectAll('text').data(y.ticks(4)).join('text')
+    .attr('x', m.l - 6).attr('y', (v) => y(v) + 4).attr('text-anchor', 'end').text(fmt);
+  svg.append('g').selectAll('text').data(rows.filter((r, i) => W > 420 || i % 2 === 0)).join('text')
+    .attr('x', (r) => x(r.month)).attr('y', H - 6).attr('text-anchor', 'middle').text((r) => r.month);
+  const line = (k) => d3.line().defined((r) => r[k] != null).x((r) => x(r.month)).y((r) => y(r[k]));
+  svg.append('path').datum(rows).attr('d', line('last_year')).style('fill', 'none').style('stroke', 'var(--last)').style('stroke-width', 2.5);
+  svg.append('path').datum(rows).attr('d', line('projected')).style('fill', 'none').style('stroke', 'var(--red)').style('stroke-width', 2).style('stroke-dasharray', '5 5');
+  svg.append('path').datum(rows).attr('d', line('this_year')).style('fill', 'none').style('stroke', 'var(--red)').style('stroke-width', 3).style('stroke-linecap', 'round');
+  const now = rows.filter((r) => r.this_year != null).pop();
+  if (now) svg.append('circle').attr('cx', x(now.month)).attr('cy', y(now.this_year)).attr('r', 4.5).style('fill', 'var(--red)');
+  const end = rows[rows.length - 1];
+  if (end.projected != null) svg.append('text').attr('class', 'lab').attr('x', x(end.month) - 4).attr('y', y(end.projected) - 8)
+    .attr('text-anchor', 'end').text('about ' + fmt(end.projected));
+  svg.append('g').selectAll('rect').data(rows).join('rect')
+    .attr('x', (r) => x(r.month) - x.step() / 2).attr('width', x.step()).attr('y', 0).attr('height', H).style('fill', 'transparent')
+    .on('mousemove', (ev, r) => showTip(ev, '<b>End of ' + esc(r.month) + '</b><br>' +
+      (r.this_year != null ? 'This year: ' + fmt(r.this_year) + '<br>' : '') +
+      (r.projected != null && r.this_year == null ? 'Projected: ' + fmt(r.projected) + '<br>' : '') +
+      'Last year: ' + fmt(r.last_year)))
+    .on('mouseleave', hideTip);
+}
+
+function spots(points) {
+  const el = clear('spots');
+  if (!points.length) { el.innerHTML = '<div class="error">No positions yet this year.</div>'; return; }
+  const W = Math.max(280, el.clientWidth), H = Math.round(W * 0.7), pad = 14;
+  const lat0 = d3.mean(points, (p) => p.lat), k = Math.cos(lat0 * Math.PI / 180);
+  const xs = d3.extent(points, (p) => p.lon * k), ys = d3.extent(points, (p) => p.lat);
+  const span = Math.max(xs[1] - xs[0], (ys[1] - ys[0]) * W / H, 0.01);
+  const cx = (xs[0] + xs[1]) / 2, cy = (ys[0] + ys[1]) / 2, s = (W - 2 * pad) / span;
+  const px = (p) => W / 2 + (p.lon * k - cx) * s, py = (p) => H / 2 - (p.lat - cy) * s;
+  const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+  svg.append('rect').attr('width', W).attr('height', H).attr('rx', 8).style('fill', 'var(--bg)');
+  const km = s * 1 / 111;  // 1 km
+  svg.append('line').attr('x1', pad).attr('x2', pad + km).attr('y1', H - pad).attr('y2', H - pad).style('stroke', 'var(--muted)').style('stroke-width', 2);
+  svg.append('text').attr('x', pad).attr('y', H - pad - 6).text('1 km');
+  svg.append('text').attr('x', W - pad).attr('y', pad + 8).attr('text-anchor', 'end').text('N ↑');
+  svg.selectAll('circle').data(points).join('circle')
+    .attr('cx', px).attr('cy', py).attr('r', 5)
+    .style('fill', 'var(--red)').style('fill-opacity', .55).style('stroke', 'var(--panel)').style('stroke-width', 1)
+    .on('mousemove click', (ev, p) => showTip(ev, '<b>' + esc(p.month) + '</b><br>' + esc(p.cause)))
+    .on('mouseleave', hideTip);
+}
+
+function draw(d) {
+  const updated = new Date(d.updated);
+  document.getElementById('sub').textContent = 'Year to date, ' + d.year + ', compared with the same point in ' + d.last_year + '.';
+  document.getElementById('updated').textContent = 'Last updated ' + updated.toLocaleString('en-GB', {dateStyle: 'long', timeStyle: 'short'}) + '.';
+  const c = d.headline[0];
+  let take = 'Call-outs are ' + change(c.change_pct) + ' last year (' + fmt(c.this_year) + ' against ' + fmt(c.last_year) + ').';
+  if (d.top_cause) take += ' The top root cause is ' + d.top_cause + '.';
+  document.getElementById('take').textContent = take;
+  if (d.callouts_without_cause) document.getElementById('causeNote').textContent =
+    'Call-outs this year, from the tags on each call-out. ' + d.callouts_without_cause + (d.callouts_without_cause === 1 ? ' call-out has' : ' call-outs have') + ' no root cause tag.';
+  tiles(d);
+  running(d.running_total);
+  columns('monthly', d.monthly, 'month');
+  hbars('causes', d.causes.filter((r) => r.this_year || r.last_year));
+  hbars('places', d.places);
+  spots(d.spots);
+  columns('days', d.days, 'day');
+  hbars('types', d.types);
+}
+
+let data = null;
+fetch('data/stats.json', {cache: 'no-store'})
+  .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then((d) => { data = d; draw(d); })
+  .catch(() => { document.getElementById('sub').textContent = 'The figures could not be loaded. Please try again later.'; });
+let t;
+window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => data && draw(data), 150); });
+</script>
+</body>
+</html>
