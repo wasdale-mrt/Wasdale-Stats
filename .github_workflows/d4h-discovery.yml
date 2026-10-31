@@ -1,0 +1,25 @@
+# D4H discovery - run by hand from the Actions tab.
+# Read only: prints D4H incident field names, tag lists and counts.
+# The log is public, so only dates, references, tags and position are shown.
+
+name: D4H discovery (read only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Read D4H (no changes made)
+        env:
+          D4H_TOKEN: ${{ secrets.D4H_TOKEN }}
+        run: python tools/d4h_discovery.py

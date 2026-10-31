@@ -46,10 +46,11 @@ A design mock-up with sample data lives in Claude as an artifact called
 ## Next steps
 
 1. Lee saves the D4H token as a GitHub secret (`D4H_TOKEN`).
-2. Claude adds a **discovery job** (run by hand from the Actions tab) that
+2. **Done (31 Oct 2026).** Claude adds a **discovery job** (run by hand from the Actions tab) that
    prints D4H incident field names, tag lists and counts. It prints values
    only for dates, references, tags and position - no casualty or member
    details, because Actions logs on a public repository are public.
+   Lee runs it once and pastes the log into Claude.
 3. From that output, Claude writes the nightly stats job and the pages.
 4. Turn on GitHub Pages.
 
@@ -58,6 +59,8 @@ A design mock-up with sample data lives in Claude as an artifact called
 | Path | What it is |
 |---|---|
 | `site/map.html` | The OpenTopoMap call-out map. Shows sample data until `callouts.json` exists beside it. |
+| `.github/workflows/d4h-discovery.yml` | Discovery job. Run by hand: Actions tab > "D4H discovery (read only)" > Run workflow. |
+| `tools/d4h_discovery.py` | The discovery script. GET only. Prints field names, and values only for dates, references, tags and position. |
 
 ## Rules
 
