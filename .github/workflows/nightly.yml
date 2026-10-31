@@ -1,0 +1,54 @@
+# Nightly stats: reads D4H (read only), builds the figures, and publishes
+# the site/ folder to GitHub Pages.
+#
+# Runs: every night at about 02:17 (UK winter time), when files change on
+# main, and by hand from the Actions tab ("Run workflow").
+#
+# Needs: the D4H_TOKEN secret, and Settings > Pages > Source = "GitHub Actions".
+
+name: Nightly stats
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["site/**", "tools/**", ".github/workflows/nightly.yml"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Read D4H and build the figures (no changes made to D4H)
+        env:
+          D4H_TOKEN: ${{ secrets.D4H_TOKEN }}
+        run: python tools/build_stats.py
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
