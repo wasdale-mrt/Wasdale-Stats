@@ -202,7 +202,12 @@ function hbars(id, rows) {
     .attr('width', (r) => Math.max(0, x(r.this_year) - m.l)).style('fill', 'var(--red)');
   g.append('line').attr('x1', (r) => x(r.last_year)).attr('x2', (r) => x(r.last_year))
     .attr('y1', -3).attr('y2', y.bandwidth() + 3).style('stroke', 'var(--ink)').style('stroke-width', 2);
-  g.append('text').attr('x', (r) => Math.max(x(r.this_year), x(r.last_year)) + 6).attr('y', y.bandwidth() / 2 + 4).text((r) => fmt(r.this_year));
+  // Number sits just after the red bar. If last year's line is right there, it moves past the line.
+  g.append('text').attr('y', y.bandwidth() / 2 + 4).text((r) => fmt(r.this_year))
+    .attr('x', (r) => {
+      const end = x(r.this_year), tick = x(r.last_year);
+      return tick >= end - 2 && tick < end + 26 ? tick + 6 : end + 6;
+    });
   g.append('rect').attr('width', W).attr('height', y.bandwidth()).style('fill', 'transparent')
     .on('mousemove', (ev, r) => showTip(ev, '<b>' + esc(r.name) + '</b><br>This year: ' + fmt(r.this_year) + '<br>Last year, same point: ' + fmt(r.last_year)))
     .on('mouseleave', hideTip);
