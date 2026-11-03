@@ -54,6 +54,8 @@
   .keys { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:13px; color:var(--muted); margin-top:8px; }
   .keys .sw { border-radius:50%; }
 </style>
+<!-- GoatCounter visit counter. Change "wasdale-stats" if your GoatCounter site code is different. -->
+<script data-goatcounter="https://wasdale-stats.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
 <main>
@@ -128,6 +130,7 @@
         <li>No names or casualty details are shown.</li>
       </ul>
       <p class="note" style="margin-top:10px" id="updated"></p>
+      <p class="note" id="views" hidden></p>
     </div>
   </section>
 </main>
@@ -323,6 +326,11 @@ fetch('data/stats.json', {cache: 'no-store'})
   .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then((d) => { data = d; draw(d); })
   .catch(() => { document.getElementById('sub').textContent = 'The figures could not be loaded. Please try again later.'; });
+// Visitor number from GoatCounter. Stays hidden if it can't be read.
+fetch('https://wasdale-stats.goatcounter.com/counter/TOTAL.json')
+  .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then((v) => { const el = document.getElementById('views'); el.textContent = 'Page views so far: ' + v.count + '.'; el.hidden = false; })
+  .catch(() => {});
 let t;
 window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => data && draw(data), 150); });
 </script>
