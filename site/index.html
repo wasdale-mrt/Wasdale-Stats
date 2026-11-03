@@ -130,6 +130,7 @@
         <li>No names or casualty details are shown.</li>
       </ul>
       <p class="note" style="margin-top:10px" id="updated"></p>
+      <p class="note" id="views" hidden></p>
     </div>
   </section>
 </main>
@@ -325,6 +326,11 @@ fetch('data/stats.json', {cache: 'no-store'})
   .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then((d) => { data = d; draw(d); })
   .catch(() => { document.getElementById('sub').textContent = 'The figures could not be loaded. Please try again later.'; });
+// Visitor number from GoatCounter. Stays hidden if it can't be read.
+fetch('https://wasdale-stats.goatcounter.com/counter/TOTAL.json')
+  .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then((v) => { const el = document.getElementById('views'); el.textContent = 'This page has been viewed ' + v.count + ' times.'; el.hidden = false; })
+  .catch(() => {});
 let t;
 window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => data && draw(data), 150); });
 </script>
