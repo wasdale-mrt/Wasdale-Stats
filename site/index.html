@@ -329,7 +329,7 @@ fetch('data/stats.json', {cache: 'no-store'})
 // Visitor number from GoatCounter. Stays hidden if it can't be read.
 fetch('https://wasdale-stats.goatcounter.com/counter/TOTAL.json')
   .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then((v) => { const el = document.getElementById('views'); el.textContent = 'This page has been viewed ' + v.count + ' times.'; el.hidden = false; })
+  .then((v) => { const el = document.getElementById('views'); el.textContent = 'Page views so far: ' + v.count + '.'; el.hidden = false; })
   .catch(() => {});
 let t;
 window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => data && draw(data), 150); });
