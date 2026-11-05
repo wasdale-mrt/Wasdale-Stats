@@ -37,6 +37,7 @@
   .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px; }
   .sw-tick { display:inline-block; width:2px; height:12px; margin-right:6px; vertical-align:-2px; background:var(--ink); }
   .sw-dash { display:inline-block; width:16px; margin-right:6px; vertical-align:3px; border-top:2px dashed var(--red); }
+  .sw-dot { display:inline-block; width:16px; margin-right:6px; vertical-align:3px; border-top:2px dotted var(--ink); }
   .chart { position:relative; margin-top:8px; }
   .chart > svg { display:block; width:100%; height:auto; overflow:visible; }
   .chart > svg text { fill:var(--muted); font-size:12px; font-family:inherit; }
@@ -70,8 +71,8 @@
   <section class="grid">
     <div class="card">
       <h2>Where we are vs last year</h2>
-      <p class="note">Running total of call-outs. The dotted line shows where we end up if the rest of the year runs like last year.</p>
-      <div class="legend"><span><span class="sw" style="background:var(--red)"></span>This year</span><span><span class="sw-dash"></span>Projected</span><span><span class="sw" style="background:var(--last)"></span>Last year</span></div>
+      <p class="note">Running total of call-outs. The dashed red line shows where we end up if the rest of the year runs like last year.</p>
+      <div class="legend"><span><span class="sw" style="background:var(--red)"></span>This year</span><span><span class="sw-dash"></span>Projected</span><span><span class="sw" style="background:var(--last)"></span>Last year</span><span id="highKey" hidden><span class="sw-dot"></span><span id="highKeyText"></span></span></div>
       <div class="chart" id="running"></div>
     </div>
     <div class="card">
@@ -166,6 +167,17 @@ function tiles(d) {
       '<div class="foot"><b>' + esc(change(h.change_pct)) + '</b> last year (' + fmt(h.last_year) + ')</div>';
     el.appendChild(c);
   });
+  const h = d.highest_year;
+  if (h) {
+    const c = document.createElement('div'); c.className = 'card';
+    const foot = h.this_year > h.callouts
+      ? 'This year (' + fmt(h.this_year) + ') has now gone past ' + h.year + '.'
+      : 'At this point in ' + h.year + ': <b>' + fmt(h.same_point) + '</b>. This year: <b>' + fmt(h.this_year) + '</b>.';
+    c.innerHTML = '<div class="label">Highest recorded year (' + esc(h.year) + ')</div>' +
+      '<div class="big">' + fmt(h.callouts) + '</div>' +
+      '<div class="foot">' + foot + '</div>';
+    el.appendChild(c);
+  }
 }
 
 // Grouped bars: rows [{key, this_year, last_year}]
@@ -219,11 +231,13 @@ function hbars(id, rows) {
     .on('mouseleave', hideTip);
 }
 
-function running(rows) {
+function running(rows, high) {
+  // Skip the extra line if the highest year is last year (it's already drawn).
+  const showHigh = high && high.year !== data.last_year;
   const el = clear('running'), W = Math.max(280, el.clientWidth), H = 240, m = {t:10, r:10, b:24, l:36};
   const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`);
   const x = d3.scalePoint(rows.map((r) => r.month), [m.l, W - m.r]);
-  const top = d3.max(rows, (r) => Math.max(r.this_year || 0, r.last_year || 0, r.projected || 0)) || 1;
+  const top = d3.max(rows, (r) => Math.max(r.this_year || 0, r.last_year || 0, r.projected || 0, showHigh ? r.highest || 0 : 0)) || 1;
   const y = d3.scaleLinear([0, top], [H - m.b, m.t]).nice();
   svg.append('g').selectAll('line').data(y.ticks(4)).join('line')
     .attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', 'var(--grid)');
@@ -233,6 +247,7 @@ function running(rows) {
     .attr('x', (r) => x(r.month)).attr('y', H - 6).attr('text-anchor', 'middle').text((r) => r.month);
   const line = (k) => d3.line().defined((r) => r[k] != null).x((r) => x(r.month)).y((r) => y(r[k]));
   svg.append('path').datum(rows).attr('d', line('last_year')).style('fill', 'none').style('stroke', 'var(--last)').style('stroke-width', 2.5);
+  if (showHigh) svg.append('path').datum(rows).attr('d', line('highest')).style('fill', 'none').style('stroke', 'var(--ink)').style('stroke-width', 2).style('stroke-dasharray', '1 5').style('stroke-linecap', 'round');
   svg.append('path').datum(rows).attr('d', line('projected')).style('fill', 'none').style('stroke', 'var(--red)').style('stroke-width', 2).style('stroke-dasharray', '5 5');
   svg.append('path').datum(rows).attr('d', line('this_year')).style('fill', 'none').style('stroke', 'var(--red)').style('stroke-width', 3).style('stroke-linecap', 'round');
   const now = rows.filter((r) => r.this_year != null).pop();
@@ -245,7 +260,8 @@ function running(rows) {
     .on('mousemove', (ev, r) => showTip(ev, '<b>End of ' + esc(r.month) + '</b><br>' +
       (r.this_year != null ? 'This year: ' + fmt(r.this_year) + '<br>' : '') +
       (r.projected != null && r.this_year == null ? 'Projected: ' + fmt(r.projected) + '<br>' : '') +
-      'Last year: ' + fmt(r.last_year)))
+      'Last year: ' + fmt(r.last_year) +
+      (showHigh ? '<br>' + esc(high.year) + ': ' + fmt(r.highest) : '')))
     .on('mouseleave', hideTip);
 }
 
@@ -312,7 +328,10 @@ function draw(d) {
   if (d.callouts_without_cause) document.getElementById('causeNote').textContent =
     'Call-outs this year, from the tags on each call-out. ' + d.callouts_without_cause + (d.callouts_without_cause === 1 ? ' call-out has' : ' call-outs have') + ' no root cause tag.';
   tiles(d);
-  running(d.running_total);
+  const h = d.highest_year, showHigh = h && h.year !== d.last_year;
+  document.getElementById('highKey').hidden = !showHigh;
+  if (showHigh) document.getElementById('highKeyText').textContent = 'Highest recorded year (' + h.year + ')';
+  running(d.running_total, h);
   columns('monthly', d.monthly, 'month');
   hbars('causes', d.causes.filter((r) => r.this_year || r.last_year));
   hbars('places', d.places);

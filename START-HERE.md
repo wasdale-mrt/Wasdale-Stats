@@ -31,9 +31,12 @@ repository.
 - Headline: call-outs up or down on last year, and the top root cause.
 - Big numbers, each with change vs same point last year: call-outs, team hours
   on call-outs, average members per call-out.
+- **Highest recorded year** box: the busiest full year in D4H (2024 at the
+  moment), its total, and how many call-outs it had at this point in the year
+  next to this year's figure.
 - **Where we are vs last year**: running total line. After the current month,
-  a dotted projection line = where we end up if the rest of the year runs like
-  last year.
+  a dashed red projection line = where we end up if the rest of the year runs
+  like last year. A dotted black line shows the highest recorded year.
 - Call-outs by month (this year beside last year).
 - **Root cause**: from the tags picked on each call-out in D4H.
 - **Where**: from the location tag, and the incident grid ref / lat-long.
@@ -54,6 +57,11 @@ repository.
   They are never written to the public files.
 - **Map popups** show reference, month and year, type, place and causes.
   No exact date or time.
+- **Highest recorded year (5 Nov 2026).** Never call it a "record" or a
+  target. The team wants fewer call-outs, not more. No progress bar and no
+  "to beat" wording. It is worked out each night, not typed in. 2024 is the
+  busiest year, and it is in D4H, so the figure is right even though older
+  years are not in D4H.
 - Which tag is which group lives in `tools/tag_groups.py`. A new D4H tag is
   left off the pages until it is added there. The nightly log lists any.
 

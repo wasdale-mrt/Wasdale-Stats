@@ -48,12 +48,17 @@ def parse_time(s):
     return dt.datetime.fromisoformat(s.replace("Z", "+00:00")).astimezone(UK)
 
 
+def same_point_in(year, today):
+    """The same day in another year (28 Feb if that year has no 29 Feb)."""
+    try:
+        return today.replace(year=year)
+    except ValueError:
+        return today.replace(year=year, day=28)
+
+
 def same_point_last_year(today):
     """The same day last year (28 Feb if today is 29 Feb)."""
-    try:
-        return today.replace(year=today.year - 1)
-    except ValueError:
-        return today.replace(year=today.year - 1, day=28)
+    return same_point_in(today.year - 1, today)
 
 
 def clean(incidents, titles):
@@ -150,13 +155,31 @@ def build(rows, now):
             "change_pct": pct_change(s_now[key] or 0, s_last[key] or 0),
         })
 
+    # Highest recorded year: the busiest full year before this one.
+    per_year = collections.Counter(r["start"].year for r in rows)
+    past = {y: n for y, n in per_year.items() if y < year}
+    high_year = max(past, key=lambda y: (past[y], y)) if past else None
+    by_month_high = collections.Counter(
+        r["start"].month for r in rows if r["start"].year == high_year)
+    highest = None
+    if high_year:
+        cut = same_point_in(high_year, today)
+        highest = {
+            "year": high_year,
+            "callouts": past[high_year],
+            "same_point": sum(1 for r in rows if r["start"].year == high_year
+                              and r["start"].date() <= cut),
+            "this_year": len(this_ytd),
+        }
+
     # Running total by month, with a projection after this month.
     by_month_now = collections.Counter(r["start"].month for r in this_ytd)
     by_month_last = collections.Counter(r["start"].month for r in last_all)
-    cum_now = cum_last = 0
+    cum_now = cum_last = cum_high = 0
     running, monthly = [], []
     for m in range(1, 13):
         cum_last += by_month_last[m]
+        cum_high += by_month_high[m]
         if m <= today.month:
             cum_now += by_month_now[m]
         projected = None
@@ -167,6 +190,7 @@ def build(rows, now):
             "this_year": cum_now if m <= today.month else None,
             "last_year": cum_last,
             "projected": projected,
+            "highest": cum_high if high_year else None,
         })
         monthly.append({
             "month": MONTHS[m - 1],
@@ -186,8 +210,6 @@ def build(rows, now):
     no_cause = sum(1 for r in this_ytd if not r["causes"])
     top_cause = causes[0]["name"] if causes and causes[0]["this_year"] else None
 
-    per_year = collections.Counter(r["start"].year for r in rows)
-
     spots = [{"lat": r["lat"], "lon": r["lon"], "month": MONTHS[r["start"].month - 1],
               "cause": r["causes"][0] if r["causes"] else "Not recorded"}
              for r in this_ytd if r["lat"] is not None]
@@ -198,6 +220,7 @@ def build(rows, now):
         "last_year": last,
         "compared_to": cutoff_last.isoformat(),
         "headline": headline,
+        "highest_year": highest,
         "top_cause": top_cause,
         "running_total": running,
         "monthly": monthly,
@@ -272,6 +295,9 @@ def main():
     print("Call-outs per year (whole year):")
     for y in stats["per_year"]:
         print(f"  {y['year']}: {y['callouts']}")
+    if stats["highest_year"]:
+        h = stats["highest_year"]
+        print(f"Highest recorded year: {h['year']} ({h['callouts']})")
     print(f"This year so far: {stats['headline'][0]['this_year']}")
     print(f"Last year to {stats['compared_to']}: {stats['headline'][0]['last_year']}")
     print(f"Map points: {len(points)}")
