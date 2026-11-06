@@ -62,6 +62,10 @@ repository.
   "to beat" wording. It is worked out each night, not typed in. 2024 is the
   busiest year, and it is in D4H, so the figure is right even though older
   years are not in D4H.
+- **Footer (6 Nov 2026)** on both pages: copyright Wasdale Mountain Rescue
+  Team (year updates itself), registered charity no. 1170178, links to
+  wmrt.org.uk and the donate page, "Designed by Lee Tunstall". The dashboard
+  also notes that figures may change as D4H records are updated.
 - Which tag is which group lives in `tools/tag_groups.py`. A new D4H tag is
   left off the pages until it is added there. The nightly log lists any.
 
