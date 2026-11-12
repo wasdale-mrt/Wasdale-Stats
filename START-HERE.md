@@ -1,6 +1,6 @@
 # Wasdale MRT stats - start here
 
-Public call-out stats and map for Wasdale Mountain Rescue Team, updated nightly
+Public call-out stats and map for Wasdale Mountain Rescue Team, updated every 2 hours
 from D4H. Repository: https://github.com/wasdale-mrt/Wasdale-Stats (public).
 
 ## What we are building
@@ -67,7 +67,7 @@ repository.
   wmrt.org.uk and the donate page, "Designed by Lee Tunstall". The dashboard
   also notes that figures may change as D4H records are updated.
 - Which tag is which group lives in `tools/tag_groups.py`. A new D4H tag is
-  left off the pages until it is added there. The nightly log lists any.
+  left off the pages until it is added there. The stats job log lists any.
 
 A design mock-up with sample data lives in Claude as an artifact called
 "Wasdale MRT Dashboard". The public version will be rebuilt as a page here.
@@ -82,7 +82,7 @@ A design mock-up with sample data lives in Claude as an artifact called
    Lee runs it once and pastes the log into Claude.
 3. **Done (31 Oct 2026).** Claude writes the nightly stats job and the pages.
 4. Lee turns on GitHub Pages: Settings > Pages > Source = **GitHub Actions**.
-   Then runs "Nightly stats" once by hand from the Actions tab.
+   Then runs "Stats update" once by hand (it was called "Nightly stats") from the Actions tab.
    The pages will be at https://wasdale-mrt.github.io/Wasdale-Stats/
 
 ## Files
@@ -91,8 +91,8 @@ A design mock-up with sample data lives in Claude as an artifact called
 |---|---|
 | `site/index.html` | The stats dashboard. Reads `data/stats.json`. |
 | `site/map.html` | The OpenTopoMap call-out map. Reads `callouts.json`. Shows sample data until it exists. Has a year picker. |
-| `.github/workflows/nightly.yml` | Nightly job, about 02:17 each night. Reads D4H, builds both JSON files, publishes `site/` to GitHub Pages. Also runs by hand, or when files change. |
-| `tools/build_stats.py` | The nightly script. GET only. The JSON files are made fresh each night and are not kept in the repository. |
+| `.github/workflows/nightly.yml` | Stats job, every 2 hours (about 17 minutes past). Reads D4H, builds both JSON files, publishes `site/` to GitHub Pages. Also runs by hand, or when files change. |
+| `tools/build_stats.py` | The stats script. GET only. The JSON files are made fresh every run and are not kept in the repository. |
 | `tools/tag_groups.py` | Which D4H tag is a call-out type, root cause, place, training, private (injury/medical) or not shown. |
 | `.github/workflows/d4h-discovery.yml` | Discovery job. Run by hand: Actions tab > "D4H discovery (read only)" > Run workflow. |
 | `tools/d4h_discovery.py` | The discovery script. GET only. Prints field names, and values only for dates, references, tags and position. |

@@ -1,16 +1,16 @@
-# Nightly stats: reads D4H (read only), builds the figures, and publishes
+# Stats update: reads D4H (read only), builds the figures, and publishes
 # the site/ folder to GitHub Pages.
 #
-# Runs: every night at about 02:17 (UK winter time), when files change on
+# Runs: every 2 hours (at about 17 minutes past), when files change on
 # main, and by hand from the Actions tab ("Run workflow").
 #
 # Needs: the D4H_TOKEN secret, and Settings > Pages > Source = "GitHub Actions".
 
-name: Nightly stats
+name: Stats update
 
 on:
   schedule:
-    - cron: "17 2 * * *"
+    - cron: "17 */2 * * *"
   workflow_dispatch:
   push:
     branches: [main]
