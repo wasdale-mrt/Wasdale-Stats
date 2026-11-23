@@ -48,6 +48,15 @@ repository.
 
 - **Alerts count** as call-outs, with Full Team and Limited.
 - **Sensitive root causes** (Suicide, Body Recovery) are **shown as tagged**.
+- **Suicide held back until year end (23 Nov 2026, Lee as team leader).**
+  For the current year, "Suicide" is not shown anywhere: dashboard, map or
+  popups. It shows for a year once that year has ended (from 1 January).
+  The call-out still counts in the totals. Last year's figure is also left
+  out of the this-year chart, so it never reads "0 vs N". Reason: media could
+  link the place and date. Set in `HELD_BACK` in `tools/tag_groups.py`.
+- **Popups (23 Nov 2026)**: hover shows reference and month; click shows
+  reference, month and year, place, cause and type, on both the dashboard
+  and the full map.
 - **Team hours** = members on the call-out (`countAttendance`) x how long it
   lasted (`startsAt` to `endsAt`). D4H has no hours field on incidents.
 - **Every incident counts.** Training exercises are kept apart in D4H, so the
@@ -56,7 +65,7 @@ repository.
 - **Injury and medical tags** (body parts, conditions) are casualty details.
   They are never written to the public files.
 - **Map popups** show reference, month and year, type, place and causes.
-  No exact date or time.
+  No exact date or time, and no lat/long.
 - **Highest recorded year (5 Nov 2026).** Never call it a "record" or a
   target. The team wants fewer call-outs, not more. No progress bar and no
   "to beat" wording. It is worked out each night, not typed in. 2024 is the

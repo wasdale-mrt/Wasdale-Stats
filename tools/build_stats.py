@@ -111,6 +111,18 @@ def clean(incidents, titles):
     return rows, unknown, dropped_training
 
 
+def hold_back(rows, year):
+    """Remove held-back root causes from call-outs in this year (see tag_groups.HELD_BACK)."""
+    for r in rows:
+        if r["start"].year >= year:
+            r["causes"] = [c for c in r["causes"] if c not in tg.HELD_BACK]
+
+
+def without_held_back(rows):
+    """Copies of rows with held-back causes removed, for this-year vs last-year charts."""
+    return [dict(r, causes=[c for c in r["causes"] if c not in tg.HELD_BACK]) for r in rows]
+
+
 def pct_change(now, before):
     if not before:
         return None
@@ -204,14 +216,20 @@ def build(rows, now):
             for d in range(7)]
 
     types = counter_rows(this_ytd, last_ytd, "type_list")
-    causes = counter_rows(this_ytd, last_ytd, "causes")
+    # Last year's held-back causes are left out too, so the chart never shows
+    # "0 this year" next to a figure for last year.
+    causes = counter_rows(this_ytd, without_held_back(last_ytd), "causes")
     places = counter_rows(this_ytd, last_ytd, "places", top=12)
 
     no_cause = sum(1 for r in this_ytd if not r["causes"])
     top_cause = causes[0]["name"] if causes and causes[0]["this_year"] else None
 
-    spots = [{"lat": r["lat"], "lon": r["lon"], "month": MONTHS[r["start"].month - 1],
-              "cause": r["causes"][0] if r["causes"] else "Not recorded"}
+    spots = [{"ref": r["ref"], "lat": r["lat"], "lon": r["lon"],
+              "month": MONTHS[r["start"].month - 1], "year": r["start"].year,
+              "type": r["type"],
+              "location": ", ".join(r["places"]) or "Not recorded",
+              "cause": r["causes"][0] if r["causes"] else "Not recorded",
+              "causes": r["causes"]}
              for r in this_ytd if r["lat"] is not None]
 
     return {
@@ -277,6 +295,7 @@ def main():
         now = dt.datetime.fromisoformat(args.now).replace(tzinfo=UK)
 
     rows, unknown, dropped = clean(incidents, titles)
+    hold_back(rows, now.year)
     for r in rows:
         r["type_list"] = [r["type"]]
     stats = build(rows, now)

@@ -309,7 +309,12 @@ function spots(points) {
     counts[key] = (counts[key] || 0) + 1;
     const fill = key === 'Other' ? OTHER : colourFor(c);
     L.circleMarker([p.lat, p.lon], { radius: 5, color: '#fff', weight: 1, fillColor: fill, fillOpacity: .9 })
-      .bindPopup('<b>' + esc(p.month) + '</b><br>' + esc(c))
+      .bindTooltip(esc(p.ref || p.month) + (p.ref ? ' &middot; ' + esc(p.month) : ''))
+      .bindPopup(
+        '<b>' + esc(p.ref) + '</b>' + (p.ref ? ' &middot; ' : '') + esc(p.month) + (p.year ? ' ' + esc(p.year) : '') +
+        (p.location ? '<br>' + esc(p.location) : '') +
+        '<br>Cause: ' + esc(p.causes && p.causes.length ? p.causes.join(', ') : c) +
+        (p.type ? '<br>Type: ' + esc(p.type) : ''))
       .addTo(spotMap);
   });
   // Fit to the busy middle (most call-outs), so a few far-off ones don't shrink the view.

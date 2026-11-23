@@ -90,13 +90,13 @@ function draw(points) {
     const cause = p.cause || 'Other';
     if (!groups[cause]) { groups[cause] = L.layerGroup().addTo(map); layers.push(groups[cause]); }
     L.circleMarker([lat, lon], { radius: 6, color: colourFor(cause), weight: 2, fillOpacity: .55 })
+      .bindTooltip(esc(p.ref) + ' &middot; ' + esc(p.month) + (p.year ? ' ' + esc(p.year) : ''))
       .bindPopup(
         '<div class="pop"><b>' + esc(p.ref) + '</b> &middot; ' + esc(p.month) + (p.year ? ' ' + esc(p.year) : '') +
-        '<div>Where: ' + esc(p.location) + '</div>' +
-        (p.type ? '<div>Type: ' + esc(p.type) + '</div>' : '') +
+        '<div>' + esc(p.location) + '</div>' +
         '<div>Cause: ' + esc((p.causes && p.causes.length ? p.causes.join(', ') : cause)) + '</div>' +
-        (p.grid_ref ? '<div>Grid ref: ' + esc(p.grid_ref) + '</div>' : '') +
-        '<div>' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '</div></div>')
+        (p.type ? '<div>Type: ' + esc(p.type) + '</div>' : '') +
+        (p.grid_ref ? '<div>Grid ref: ' + esc(p.grid_ref) + '</div>' : '') + '</div>')
       .addTo(groups[cause]);
   });
 

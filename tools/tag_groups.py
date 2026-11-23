@@ -85,6 +85,12 @@ PLACE = {
     4995: "Lowther Forest", 5115: "Kern Knotts", 5185: "Scoat Fell",
 }
 
+# Root causes held back for the current year (team leader's decision,
+# 23 Nov 2026). This year's call-outs do not show them anywhere: not on the
+# dashboard, not on the map. They appear for a year once that year has
+# ended (from 1 January). The call-out itself still counts as normal.
+HELD_BACK = {"Suicide"}
+
 # Swiftwater and rope course topics, plus "Swiftwater Training".
 TRAINING = set(range(3060, 3096)) | {2673}
 
