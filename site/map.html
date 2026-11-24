@@ -78,6 +78,18 @@ L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 map.setView([54.465, -3.235], 13);
 
+// Team area boundary. Shown when site/boundary.geojson exists; nothing happens if it doesn't.
+function addBoundary(m) {
+  fetch('boundary.geojson', { cache: 'no-store' })
+    .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+    .then((g) => {
+      L.geoJSON(g, { interactive: false,
+        style: { color: '#A8272E', weight: 2.5, dashArray: '8 6', fill: false } }).addTo(m);
+    })
+    .catch(() => {});
+}
+addBoundary(map);
+
 function esc(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function draw(points) {

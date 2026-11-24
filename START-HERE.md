@@ -99,6 +99,7 @@ A design mock-up with sample data lives in Claude as an artifact called
 | Path | What it is |
 |---|---|
 | `site/index.html` | The stats dashboard. Reads `data/stats.json`. |
+| `site/boundary.geojson` | Team area boundary (dashed red line on both maps). Not there yet: waiting for the shape file. If it is missing, the maps just show no line. |
 | `site/map.html` | The OpenTopoMap call-out map. Reads `callouts.json`. Shows sample data until it exists. Has a year picker. |
 | `.github/workflows/nightly.yml` | Stats job, every 2 hours (about 17 minutes past). Reads D4H, builds both JSON files, publishes `site/` to GitHub Pages. Also runs by hand, or when files change. |
 | `tools/build_stats.py` | The stats script. GET only. The JSON files are made fresh every run and are not kept in the repository. |
